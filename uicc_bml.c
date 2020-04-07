@@ -270,6 +270,15 @@ int ub_parse_ss(FILE* hFile, struct ub_ss** ret) {
     return UB_OK;
 }
 
+const uint16_t* ub_ss_get(struct ub_ss* ss, uint16_t id) {
+    for (int i = 0; i < ss->count; i++) {
+        if (ss->strings[i]->id == id)
+            return ss->strings[i]->wchars;
+    }
+
+    return L"INVALID_SS_ID";
+}
+
 void ub_free_ss(struct ub_ss* ss) {
     for (int i = 0; i < ss->count; i++) {
         if (ss->strings[i] != NULL)

@@ -3,6 +3,8 @@
 
 #include "uicc_bml.h"
 
+struct ub_ss* g_ss = NULL;
+
 #define printl(start, level, ...) { \
 for (int i = 0; i < (start?level-1:level); i++) printf("|  "); \
 if (start && level>0) printf("|--"); \
@@ -25,6 +27,9 @@ void print_ts_node(struct ub_ts_node* node, int level) {
                     printf(" %02X", prop->data_ptr[j]);
                 }
                 printf("\n");
+            }
+            else if (prop->type_b1 == 0x01 && prop->type_b2 == 0x00 && prop->type_b3 == 0x03) {
+                printf(" 0x%08X (%d) %S\n", prop->data, prop->data, ub_ss_get(g_ss, prop->data));
             }
             else {
                 printf(" 0x%08X (%d)\n", prop->data, prop->data);
@@ -75,7 +80,6 @@ void parse(FILE* hFile) {
         printf("%d = %s\n", i+1, uss->strings[i]);
     }
     printf("\n");
-    ub_free_uss(uss);
 
 
     struct ub_ac* ac;
@@ -90,7 +94,6 @@ void parse(FILE* hFile) {
         }
     }
     printf("\n");
-    ub_free_ac(ac);
 
     struct ub_ss* ss;
     r = ub_parse_ss(hFile, &ss);
@@ -104,7 +107,7 @@ void parse(FILE* hFile) {
         printf("   %S \n", string->wchars);
     }
     printf("\n");
-    ub_free_ss(ss);
+    g_ss = ss;
 
     if (ub_byte(hFile) != 0x0D)
         return UB_ERRMSG(UB_SRC_TS, UB_MSG_INVALID_FORMAT);
@@ -126,6 +129,10 @@ void parse(FILE* hFile) {
     //fclose(bin);
 
     //free(mem);
+
+    ub_free_uss(uss);
+    ub_free_ac(ac);
+    ub_free_ss(ss);
 
     return;
 }

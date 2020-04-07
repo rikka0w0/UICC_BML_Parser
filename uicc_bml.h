@@ -141,6 +141,7 @@ char* ub_prop_type_str(enum ub_ac_property_type type);
 void ub_free_ac(struct ub_ac* ac);
 
 int ub_parse_ss(FILE* hFile, struct ub_ss** ret);
+const uint16_t* ub_ss_get(struct ub_ss* ss, uint16_t id);
 const char* ub_obj_type_str(enum ub_object_type type);
 void ub_free_ss(struct ub_ss* ss);
 
