@@ -38,6 +38,7 @@ enum ub_object_type {
 	UBO_Group = 0x0700,
 	UBO_Button = 0x0F00,
 	UBO_FileMenu = 0x1300,
+	UBO_Gallery = 0x1500,
 	UBO_MenuGroup = 0x1800,
 	UBO_Tab = 0x1A00,
 	UBO_QAT = 0x2500
@@ -54,6 +55,43 @@ struct ub_ss_string {
 	enum ub_object_type type;	// WORD
 	uint16_t length;
 	uint16_t* wchars;
+};
+
+enum ub_ts_type {
+	UB_TST_PROP = 0x01,
+	UB_TST_NODE = 0x16,
+	UB_TST_COLLECTION = 0x18,
+	UB_TST_POINTER = 0x3E
+};
+
+struct ub_ts_prop {
+	enum ub_ts_type tag_type;	// BYTE
+	uint8_t type_b1, type_b2, type_b3;
+	union payload
+	{
+		uint32_t data;
+		uint8_t* data_ptr;
+	};
+};
+
+struct ub_ts_node {
+	enum ub_ts_type tag_type;	// BYTE
+	enum ub_object_type type;	// WORD
+	uint16_t length;			// Length of the node in bytes
+	uint16_t child_count;		// Number of child nodes
+	void** child_ptrs;
+};
+
+struct ub_ts_collection {
+	enum ub_ts_type tag_type;	// BYTE
+	uint8_t type;
+	uint16_t child_count;		// Number of child nodes
+	struct ub_ts_node** child_ptrs;
+};
+
+struct ub_ts_pointer {
+	enum ub_ts_type tag_type;	// BYTE
+	uint32_t target_addr;
 };
 
 enum ub_src {
@@ -73,11 +111,13 @@ enum ub_err {
 	UB_MSG_INVALID_HEADER,
 	UB_MSG_INVALID_FORMAT,
 	UB_MSG_INVALID_LENGTH,
+	UB_MSG_FAILED_UNKNOWN,
 
 	ub_msg_len	// Do not use
 };
 
 #define UB_OK UB_ERRMSG(UB_SRC_UNKNOWN, UB_MSG_OK)
+#define UB_FAILED UB_ERRMSG(UB_SRC_UNKNOWN, UB_MSG_FAILED_UNKNOWN)
 #define UB_ERRMSG(src, msg) (((src&0xFF)<<24) | (msg&0xFFFF))
 #define UB_ERRMSG_SRC(errmsg) ((enum ub_src) ((errmsg>>24)&0xFF))
 #define UB_ERRMSG_MSG(errmsg) ((enum ub_err) (msg&0xFFFF))
@@ -103,4 +143,13 @@ void ub_free_ac(struct ub_ac* ac);
 int ub_parse_ss(FILE* hFile, struct ub_ss** ret);
 const char* ub_obj_type_str(enum ub_object_type type);
 void ub_free_ss(struct ub_ss* ss);
+
+int ub_parse_ts_tag(FILE* hFile, void** ret);
+int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret);
+int ub_parse_ts_node(FILE* hFile, struct ub_ts_node** ret);
+int ub_parse_ts_collection(FILE* hFile, struct ub_ts_collection** ret);
+int ub_parse_ts_pointer(FILE* hFile, struct ub_ts_pointer** ret);
+
+int ub_ts_prop_len(struct ub_ts_prop*);
+const char* ub_ts_prop_name_str(struct ub_ts_prop*);
 #endif

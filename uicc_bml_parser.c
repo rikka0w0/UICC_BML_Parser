@@ -3,8 +3,58 @@
 
 #include "uicc_bml.h"
 
+#define printl(start, level, ...) { \
+for (int i = 0; i < (start?level-1:level); i++) printf("|  "); \
+if (start && level>0) printf("|--"); \
+printf(__VA_ARGS__); \
+}
 
+void print_ts_node(struct ub_ts_node* node, int level) {
+    printl(1, level, "Node: 0x%04X (%s), %d children\n", node->type, ub_obj_type_str(node->type), node->child_count);
+    printl(0, level, "{\n");
+    level++;
 
+    for (int i = 0; i < node->child_count; i++) {
+        enum ub_ts_type tag_type = *((enum ub_ts_type*) node->child_ptrs[i]);
+        if (tag_type == UB_TST_PROP) {
+            struct ub_ts_prop* prop = node->child_ptrs[i];
+            printl(1, level, "Prop: %s =", ub_ts_prop_name_str(prop));
+            int len = ub_ts_prop_len(prop);
+            if (len > 4) {
+                for (int j = 0; j < len; j++) {
+                    printf(" %02X", prop->data_ptr[j]);
+                }
+                printf("\n");
+            }
+            else {
+                printf(" 0x%08X (%d)\n", prop->data, prop->data);
+            }
+        }
+        else if (tag_type == UB_TST_NODE) {
+            struct ub_ts_node* childnode = node->child_ptrs[i];
+            print_ts_node(childnode, level);
+        }
+        else if (tag_type == UB_TST_COLLECTION) {
+            struct ub_ts_collection* coll = node->child_ptrs[i];
+            printl(1, level, "Collection: type = 0x%02X (%d), %d children\n", coll->type, coll->type, coll->child_count);
+            
+            printl(0, level, "[\n");
+            level++;
+            for (int j = 0; j < coll->child_count; j++) {
+                print_ts_node(coll->child_ptrs[j], level);
+            }
+            level--;
+            printl(0, level, "]\n");
+        }
+        else if (tag_type == UB_TST_POINTER) {
+            struct ub_ts_pointer* pointer = node->child_ptrs[i];
+            printl(1, level, "Pointer: -> 0x%08X\n", pointer->target_addr);
+        }
+    }
+
+    level--;
+    printl(0, level, "}\n");
+}
 
 void parse(FILE* hFile) {
     int header_valid = ub_check_header(hFile);
@@ -62,15 +112,20 @@ void parse(FILE* hFile) {
         return UB_ERRMSG(UB_SRC_TS, UB_MSG_INVALID_FORMAT);
     uint32_t ps_offset = ub_dword(hFile);
 
-    uint32_t sz = ps_offset - ftell(hFile);
-    uint8_t* mem = malloc(sz);
-    fread(mem, 1, sz, hFile);
+    struct ub_ts_node* rootNode;
+    r= ub_parse_ts_tag(hFile, &rootNode);
+    printf("# Parsing the Tree section\n");
+    print_ts_node(rootNode, 0);
+    //printf("Tree Section starts at 0x%04X\n", ftell(hFile));
+    //uint32_t sz = ps_offset - ftell(hFile);
+    //uint8_t* mem = malloc(sz);
+    //fread(mem, 1, sz, hFile);
 
-    FILE* bin = fopen("tree.bin", "wb");
-    fwrite(mem, 1, sz, bin);
-    fclose(bin);
+    //FILE* bin = fopen("tree.bin", "wb");
+    //fwrite(mem, 1, sz, bin);
+    //fclose(bin);
 
-    free(mem);
+    //free(mem);
 
     return;
 }

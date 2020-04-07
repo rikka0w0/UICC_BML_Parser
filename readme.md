@@ -87,54 +87,74 @@ Little-endian:
 1. 0x0700 Group
 1. 0x0F00 Button
 1. 0x1300 "File" Menu
+1. 0x1500 Gallery
 1. 0x1800 MenuGroup
 1. 0x1A00 Tab
 1. 0x2500 Quick Access Bar (Qat)
 
-# The Unnamed Section
+# The Tree Section
+## Header
 1. BYTE, 0x0D
 1. WORD, 0x0003, little-endian, fixed
 1. DWORD, the absolute address of the pointer section
-1. The root tag
+1. The root node
 1. DWORD, length of the supplementary block section
 1. supplementary block 1
 1. supplementary block 2
-1. supplementary block 3
+1. supplementary block n
 
 ## Supplementary Block format
 1. WORD, length of this supplementary block
-1. WORD, 0x0118, little-endian, fixed
-1. BYTE, unknown
-1. WORD, number of tags.
-1. tag 1
-1. tag 2
-1. tag n
+1. The root collection of this supplementary block, type=0x01 (needs double check).
 
-## Tag format
-1. BYTE, 0x16
+## Tag types
+Up to now, 4 types of nodes have been found. They are distinguished by their first byte.
+### Node (0x16)
+The root node, and the other nodes follows this format. 
+The node can have other nodes, collections, properties and pointer data as child tag.
+1. BYTE, tag type, 0x16
 1. WORD, object type
 1. WORD, 0x1000, little-endian, fixed
-1. WORD, length of this subsection, from the 0x16 byte to the end, including possible sub tags.
-1. BYTE, the sum of numbers of properties and possible sub tags
-1. Properties
-1. Sub tags header
-1. Possible sub tags1
-1. Possible sub tags2
-....
-
-### Properties
-Properties seem to start with 4 bytes which represents its type and followed by the data. The length of data is variable, depending on the property type. The known properties are:
-1. 01 01 41 2B followed by a BYTE, MajorItems=1, StandardItems=2
-1. 01 01 00 03 followed by a WORD, which is the referring Id
-1. 01 01 0B 04 followed by a BYTE, purpose unknown
-1. 01 01 0B 09 followed by a BYTE, purpose unknown
-1. 3E followed by a DWORD, the DWORD points to a position within the file, purpose known. Only seen on 16 00 13 00 10.
-
-### Sub tags
-A __section__(?) of sub tags starts with:
-1. 18 01, 2 bytes
-2. BYTE, can be 01,02,3E or more, meaning is still unknown.
-3. WORD, number of following 
+1. WORD, length of this node and its children, from the 0x16 byte to the end.
+1. BYTE, the sum of numbers of child tags
+1. child tags (binary data)
+### Collection (0x18)
+A collection holds a list of child nodes. It can only have nodes as its child tag.
+1. BYTE, tag type, 0x18
+1. BYTE, fixed, 0x01
+1. BYTE, purpose unknown, seems to be some kind of type indicator
+1. WORD, number of child nodes
+1. child nodes
+### Properties (0x01)
+Properties seem to start with 0x01 and followed by 3 bytes which represents its type, and then the data payload. 
+The length of data is variable, depending on the property type. The known properties are:
+Up to now, there are only 2 known property types.
+1. BYTE, tag type, 0x01
+1. BYTE, type b1
+1. BYTE, type b2
+1. BYTE, type b3
+1. the payload, variable length
+```
+static const struct ts_prop_type {
+    uint8_t b1, b2, b3;
+    const int len;                  // length of the data, in bytes
+    const char* name;               // Friendly name
+} ts_prop_type_data[] = {
+    {0x01, 0x41, 0x2B, 1, "MenuGroup.Class"},
+    {0x01, 0x00, 0x03, 2, "Referring Id"},
+    {0x01, 0x0B, 0x04, 1, "(01 01 0B 04) <1>"},
+    {0x01, 0x0B, 0x09, 1, "(01 01 0B 09) <1>"},
+    {0x04, 0x44, 0x00, 4, "(01 04 44 00) <4>"},
+    {0x01, 0x00, 0x02, 4, "(01 01 00 02) <4>"},
+    {0x04, 0x09, 0x00, 4, "(01 04 09 00) <4>"},
+    {0x04, 0x3F, 0x00, 4, "(01 04 3F 00) <4>"},
+    {0x01, 0x33, 0x04, 1, "(01 01 33 04) <1>"}
+};
+```
+### Pointer Data (0x3E)
+They point to addresses within the resource file.
+1. BYTE, tag type, 0x3E
+1. DWORD, the target address
 
 # The Pointer Section
 The first DWORD of this section is the length of this section, including the first DWORD. This section seems to store an array of pointers, each pointer points to the address of the first occurrence of its referring object. The purpose of this section is still not clear.
