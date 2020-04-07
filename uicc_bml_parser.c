@@ -29,7 +29,7 @@ void print_ts_node(struct ub_ts_node* node, int level) {
                 printf("\n");
             }
             else if (prop->type_b1 == 0x01 && prop->type_b2 == 0x00 && prop->type_b3 == 0x03) {
-                printf(" 0x%08X (%d) %S\n", prop->data, prop->data, ub_ss_get(g_ss, prop->data));
+                printf(" 0x%08X (%d) \033[0;31m%S\033[0m\n", prop->data, prop->data, ub_ss_get(g_ss, prop->data));
             }
             else {
                 printf(" 0x%08X (%d)\n", prop->data, prop->data);
@@ -84,10 +84,14 @@ void parse(FILE* hFile) {
 
     struct ub_ac* ac;
     r = ub_parse_ac(hFile, &ac);
+    struct ub_ss* ss;
+    r = ub_parse_ss(hFile, &ss);
+    g_ss = ss;
+
     printf("# Parsing the Application.Command section\n");
     printf("count = %d\n", ac->count);
     for (int i = 0; i < ac->count; i++) {
-        printf("%d. Id = 0x%04X (%d)\n", i + 1, ac->tags[i]->id, ac->tags[i]->id);
+        printf("%d. Id = 0x%04X (%d)  \033[0;31m%S\033[0m\n", i + 1, ac->tags[i]->id, ac->tags[i]->id, ub_ss_get(g_ss, ac->tags[i]->id));
         for (int j = 0; j < ac->tags[i]->count; j++) {
             struct ub_ac_pair* prop = ac->tags[i]->properties[j];
             printf("   0x%02X = 0x%X (%s = %d) \n", (int)prop->type, prop->value, ub_prop_type_str(prop->type), prop->value);
@@ -95,8 +99,7 @@ void parse(FILE* hFile) {
     }
     printf("\n");
 
-    struct ub_ss* ss;
-    r = ub_parse_ss(hFile, &ss);
+
     printf("# Parsing the String section\n");
     printf("length = %d\n", ss->length);
     printf("count = %d\n", ss->count);
@@ -107,7 +110,6 @@ void parse(FILE* hFile) {
         printf("   %S \n", string->wchars);
     }
     printf("\n");
-    g_ss = ss;
 
     if (ub_byte(hFile) != 0x0D)
         return UB_ERRMSG(UB_SRC_TS, UB_MSG_INVALID_FORMAT);
