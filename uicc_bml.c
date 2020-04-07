@@ -20,7 +20,11 @@ static const struct ts_prop_type {
     {0x01, 0x00, 0x02, 4, "(01 01 00 02) <4>"},
     {0x04, 0x09, 0x00, 4, "(01 04 09 00) <4>"},
     {0x04, 0x3F, 0x00, 4, "(01 04 3F 00) <4>"},
-    {0x01, 0x33, 0x04, 1, "(01 01 33 04) <1>"}
+    {0x01, 0x33, 0x04, 1, "(01 01 33 04) <1>"},
+    {0x01, 0x3D, 0x04, 1, "(01 01 3D 04) <1>"},
+    {0x04, 0x0A, 0x00, 4, "(01 04 0A 00) <4>"},
+    {0x01, 0x46, 0x04, 1, "(01 01 46 04) <1>"},
+    {0x04, 0x60, 0x00, 4, "(01 04 60 00) <4>"}
 };
 
 static const struct ac_prop_data_item {
@@ -88,13 +92,13 @@ const char* ub_obj_type_str(enum ub_object_type type) {
 
 int ub_ts_prop_len(struct ub_ts_prop* prop) {
     struct ts_prop_type* type = ub_ts_prop_type_from_bin(prop->type_b1, prop->type_b2, prop->type_b3);
-    return type == NULL ? -1 : type->len;
+    return type == NULL ? prop->type_b1 : type->len;
 }
 
 
 const char* ub_ts_prop_name_str(struct ub_ts_prop* prop) {
     struct ts_prop_type* type = ub_ts_prop_type_from_bin(prop->type_b1, prop->type_b2, prop->type_b3);
-    return type == NULL ? "Unknown Type" : type->name;
+    return type == NULL ? "Unknown Prop" : type->name;
 }
 
 int ub_check_header(FILE* hFile) {
@@ -303,7 +307,10 @@ int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret) {
     struct ts_prop_type*  prop_type_dat = ub_ts_prop_type_from_bin(b1, b2, b3);
     if (prop_type_dat == NULL) {
         long pos = ftell(hFile);
-        return UB_FAILED;
+
+        struct ts_prop_type prop_type_fake = {0, 0, 0, b1, NULL};
+        prop_type_dat = &prop_type_fake;
+        printf("Warning: unknown property: (01 %02X %02X %02X) <%d> \n", b1, b2, b3, prop_type_dat->len);
     }
 
     struct ub_ts_prop* prop = NULL;
