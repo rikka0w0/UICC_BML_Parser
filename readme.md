@@ -119,7 +119,7 @@ The node can have other nodes, collections, properties and pointer data as child
 1. BYTE, the sum of numbers of child tags
 1. child tags (binary data)
 ### Collection (0x18)
-A collection holds a list of child nodes. It can only have nodes as its child tag.
+A collection holds a list of child nodes. It can have nodes and 0x3B as its child tag.
 1. BYTE, tag type, 0x18
 1. BYTE, fixed, 0x01
 1. BYTE, purpose unknown, seems to be some kind of type indicator
@@ -134,8 +134,13 @@ Up to now, there are only 2 known property types.
 1. BYTE, type b2
 1. BYTE, type b3
 1. the payload, variable length
-
-if b1 is 0x01, b3 seems to indicate the length of the payload: 0x04->1 byte, 0x03->2bytes, 0x02->4bytes.
+If b1 is 0x01, b3 seems to indicate the length of the payload: 0x04->1 byte, 0x03->2bytes, 0x02->4bytes.
+### 0x3B
+The meaning of this tag is still unknown, but seems to be some kind of list or array.
+1. BYTE, tag type, 0x3B
+1. BYTE, type??
+1. the payload, variable length, type->len(payload): 0x09->1 byte, 0x03->2bytes, 0x02->4bytes. 
+The last two type refer to some objects declared before.
 
 ```
 static const struct ts_prop_type {

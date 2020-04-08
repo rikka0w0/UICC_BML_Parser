@@ -6,6 +6,8 @@
 // Header magic number, len = 14
 static const uint8_t header_magic[] =
 {0x00, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x53, 0x43, 0x42, 0x69, 0x6E};
+static uint32_t ts_pointer_list_count = 0;
+static struct ub_ts_pointer* ts_pointer_list[256];
 
 static const struct ts_prop_type {
     uint8_t b1, b2, b3;
@@ -30,6 +32,22 @@ static const struct ts_prop_type {
     {0x04, 0x44, 0x00, 4, "(01 04 44 00) <4>"},
     {0x04, 0x60, 0x00, 4, "(01 04 60 00) <4>"}
 };
+
+int ts_prop_guess_length(uint8_t b1, uint8_t b2, uint8_t b3) {
+    if (b1 == 0x01) {
+        if (b3 == 0x02)
+            return 4;
+        if (b3 == 0x03)
+            return 2;
+        if (b3 == 0x04)
+            return 1;
+        return 1;
+    }
+    else if (b3 == 0x04) {
+        return 4;
+    }
+    return b1;
+}
 
 static const struct ac_prop_data_item {
     enum ub_ac_property_type type;  // 1 byte
@@ -304,6 +322,8 @@ int ub_parse_ts_tag(FILE* hFile, void** ret) {
         return ub_parse_ts_collection(hFile, ret);
     case UB_TST_POINTER:
         return ub_parse_ts_pointer(hFile, ret);
+    case UB_TST_3B:
+        return ub_parse_ts_3B(hFile, ret);
     }
 
 
@@ -312,6 +332,7 @@ int ub_parse_ts_tag(FILE* hFile, void** ret) {
 
 int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret) {
     *ret = 0;
+    long pos = ftell(hFile) - 1;
 
     uint8_t b1, b2, b3;
     b1 = ub_byte(hFile);
@@ -321,9 +342,9 @@ int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret) {
     if (prop_type_dat == NULL) {
         long pos = ftell(hFile);
 
-        struct ts_prop_type prop_type_fake = {0, 0, 0, b1, NULL};
+        struct ts_prop_type prop_type_fake = {0, 0, 0, ts_prop_guess_length(b1, b2, b3), NULL};
         prop_type_dat = &prop_type_fake;
-        printf("Warning: unknown property: (01 %02X %02X %02X) <%d> \n", b1, b2, b3, prop_type_dat->len);
+        printf("Warning: unknown property @0x%04X: (01 %02X %02X %02X) <%d> \n", pos, b1, b2, b3, prop_type_dat->len);
     }
 
     struct ub_ts_prop* prop = NULL;
@@ -342,6 +363,7 @@ int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret) {
     prop->type_b1 = b1;
     prop->type_b2 = b2;
     prop->type_b3 = b3;
+    //prop->fpos = pos;
 
     *ret = prop;
     return UB_OK;
@@ -349,6 +371,7 @@ int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret) {
 
 int ub_parse_ts_node(FILE* hFile, struct ub_ts_node** ret) {
     *ret = 0;
+    long pos = ftell(hFile) - 1;
 
     uint16_t type = ub_word(hFile);
     if (ub_word(hFile) != 0x1000)
@@ -362,10 +385,12 @@ int ub_parse_ts_node(FILE* hFile, struct ub_ts_node** ret) {
     node->length = sizeInByte;
     node->child_count = childCount;
     node->child_ptrs = node + 1;
+    node->fpos = pos;
 
     for (int i = 0; i < childCount; i++) {
         void* child_ptr = NULL;
-        ub_parse_ts_tag(hFile, &child_ptr);
+        long child_fpos = ftell(hFile);
+        int r = ub_parse_ts_tag(hFile, &child_ptr);
         node->child_ptrs[i] = child_ptr;
     }
 
@@ -375,6 +400,7 @@ int ub_parse_ts_node(FILE* hFile, struct ub_ts_node** ret) {
 
 int ub_parse_ts_collection(FILE* hFile, struct ub_ts_collection** ret) {
     *ret = 0;
+    long pos = ftell(hFile)-1;
 
     if (ub_byte(hFile) != 0x01)
         return UB_ERRMSG(UB_SRC_TS, UB_MSG_INVALID_FORMAT);
@@ -386,10 +412,12 @@ int ub_parse_ts_collection(FILE* hFile, struct ub_ts_collection** ret) {
     coll->type = type;
     coll->child_count = count;
     coll->child_ptrs = coll + 1;
+    coll->fpos = pos;
 
     for (int i = 0; i < count; i++) {
         struct ub_ts_node* child_ptr = NULL;
-        ub_parse_ts_tag(hFile, &child_ptr);
+        int r = ub_parse_ts_tag(hFile, &child_ptr);
+        // long pos2 = ftell(hFile);
         coll->child_ptrs[i] = child_ptr;
     }
 
@@ -398,10 +426,44 @@ int ub_parse_ts_collection(FILE* hFile, struct ub_ts_collection** ret) {
 }
 
 int ub_parse_ts_pointer(FILE* hFile, struct ub_ts_pointer** ret) {
+    //long pos = ftell(hFile) - 1;
+
     struct ub_ts_pointer* node = malloc(sizeof(struct ub_ts_pointer));
     node->tag_type = UB_TST_POINTER;
     node->target_addr = ub_dword(hFile);
+    //node->fpos = pos;
+
+    ts_pointer_list[ts_pointer_list_count] = node;
+    ts_pointer_list_count++;
+
     *ret = node;
+    return UB_OK;
+}
+
+uint32_t ub_ts_pointer_count() {
+    return ts_pointer_list_count;
+}
+
+struct ub_ts_pointer* ub_ts_pointer_get(uint32_t id) {
+    return ts_pointer_list[id];
+}
+
+int ub_parse_ts_3B(FILE* hFile, struct ub_ts_3B** ret) {
+    //long pos = ftell(hFile) - 1;
+
+    *ret = malloc(sizeof(struct ub_ts_3B));
+    (*ret)->tag_type = UB_TST_3B;
+    (*ret)->type = ub_byte(hFile);
+    //(*ret)->fpos = pos;
+
+    if ((*ret)->type == 0x09)
+        (*ret)->data = ub_byte(hFile);
+    else if ((*ret)->type == 0x03)
+        (*ret)->data = ub_word(hFile);
+    else if ((*ret)->type == 0x02)
+        (*ret)->data = ub_dword(hFile);
+    else 
+        return UB_ERRMSG(UB_SRC_TS, UB_MSG_INVALID_FORMAT);
 
     return UB_OK;
 }

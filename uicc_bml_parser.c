@@ -11,6 +11,42 @@ if (start && level>0) printf("|--"); \
 printf(__VA_ARGS__); \
 }
 
+extern uint32_t ub_ts_pointer_count();
+extern struct ub_ts_pointer* ub_ts_pointer_get(uint32_t id);
+
+void print_ts_coll(struct ub_ts_collection* coll, int level);
+void print_ts_node(struct ub_ts_node* node, int level);
+
+void print_ts_coll(struct ub_ts_collection* coll, int level) {
+    printl(1, level, "Collection: type = 0x%02X (%d), %d children\n", coll->type, coll->type, coll->child_count);
+
+    printl(0, level, "[\n");
+    level++;
+    for (int j = 0; j < coll->child_count; j++) {
+        enum ub_ts_type tag_type = *((enum ub_ts_type*) coll->child_ptrs[j]);
+        if (tag_type == UB_TST_NODE) {
+            print_ts_node(coll->child_ptrs[j], level);
+        }
+        else if (tag_type == UB_TST_3B) {
+            struct ub_ts_3B* ts3b = coll->child_ptrs[j];
+            printl(1, level, "TS3B: 0x%02X = 0x%08X", ts3b->type, ts3b->data);
+            if (ts3b->type == 0x02 || ts3b->type == 0x03) {
+                printl(1, level, "TS3B: 0x%02X = 0x%08X", ts3b->type, ts3b->data);
+                printf(" \033[0;31m%S\033[0m", ub_ss_get(g_ss, ts3b->data));
+            }
+            else if (ts3b->type == 0x09) {
+                printl(1, level, "TS3B: 0x%02X = 0x%02X", ts3b->type, ts3b->data);
+            }
+            printf("\n");
+        }
+        else {
+            printl(1, level, "????");
+        }
+    }
+    level--;
+    printl(0, level, "]\n");
+}
+
 void print_ts_node(struct ub_ts_node* node, int level) {
     printl(1, level, "Node: 0x%04X (%s), %d children\n", node->type, ub_obj_type_str(node->type), node->child_count);
     printl(0, level, "{\n");
@@ -41,19 +77,14 @@ void print_ts_node(struct ub_ts_node* node, int level) {
         }
         else if (tag_type == UB_TST_COLLECTION) {
             struct ub_ts_collection* coll = node->child_ptrs[i];
-            printl(1, level, "Collection: type = 0x%02X (%d), %d children\n", coll->type, coll->type, coll->child_count);
-            
-            printl(0, level, "[\n");
-            level++;
-            for (int j = 0; j < coll->child_count; j++) {
-                print_ts_node(coll->child_ptrs[j], level);
-            }
-            level--;
-            printl(0, level, "]\n");
+            print_ts_coll(coll, level);
         }
         else if (tag_type == UB_TST_POINTER) {
             struct ub_ts_pointer* pointer = node->child_ptrs[i];
             printl(1, level, "Pointer: -> 0x%08X\n", pointer->target_addr);
+        }
+        else {
+            printl(1, level, "????");
         }
     }
 
@@ -121,6 +152,26 @@ void parse(FILE* hFile) {
     r= ub_parse_ts_tag(hFile, &rootNode);
     printf("# Parsing the Tree section\n");
     print_ts_node(rootNode, 0);
+    printf("\n");
+    printf("\n");
+    printf("\n");
+
+    printf("# Parsing the Supplementary Tree section\n");
+    for (int i = 0; i < ub_ts_pointer_count(); i++) {
+        uint32_t offset = ub_ts_pointer_get(i)->target_addr;
+        printf("Addr = 0x%04X\n", offset);
+        fseek(hFile, offset, SEEK_SET);
+
+        uint16_t length = ub_word(hFile);
+        struct ub_ts_collection* coll;
+        r = ub_parse_ts_tag(hFile, &coll);
+
+        print_ts_coll(coll, 0);
+
+        printf("\n");
+    }
+
+
     //printf("Tree Section starts at 0x%04X\n", ftell(hFile));
     //uint32_t sz = ps_offset - ftell(hFile);
     //uint8_t* mem = malloc(sz);

@@ -61,7 +61,8 @@ enum ub_ts_type {
 	UB_TST_PROP = 0x01,
 	UB_TST_NODE = 0x16,
 	UB_TST_COLLECTION = 0x18,
-	UB_TST_POINTER = 0x3E
+	UB_TST_POINTER = 0x3E,
+	UB_TST_3B = 0x3B
 };
 
 struct ub_ts_prop {
@@ -79,6 +80,7 @@ struct ub_ts_node {
 	enum ub_object_type type;	// WORD
 	uint16_t length;			// Length of the node in bytes
 	uint16_t child_count;		// Number of child nodes
+	uint32_t fpos;
 	void** child_ptrs;
 };
 
@@ -86,12 +88,20 @@ struct ub_ts_collection {
 	enum ub_ts_type tag_type;	// BYTE
 	uint8_t type;
 	uint16_t child_count;		// Number of child nodes
-	struct ub_ts_node** child_ptrs;
+	uint32_t fpos;
+	void** child_ptrs;
 };
 
 struct ub_ts_pointer {
 	enum ub_ts_type tag_type;	// BYTE
 	uint32_t target_addr;
+	struct ub_ts_collection* target_coll;
+};
+
+struct ub_ts_3B {
+	enum ub_ts_type tag_type;	// BYTE
+	uint8_t type;
+	uint32_t data;
 };
 
 enum ub_src {
@@ -150,6 +160,7 @@ int ub_parse_ts_prop(FILE* hFile, struct ub_ts_prop** ret);
 int ub_parse_ts_node(FILE* hFile, struct ub_ts_node** ret);
 int ub_parse_ts_collection(FILE* hFile, struct ub_ts_collection** ret);
 int ub_parse_ts_pointer(FILE* hFile, struct ub_ts_pointer** ret);
+int ub_parse_ts_3B(FILE* hFile, struct ub_ts_3B** ret);
 
 int ub_ts_prop_len(struct ub_ts_prop*);
 const char* ub_ts_prop_name_str(struct ub_ts_prop*);
