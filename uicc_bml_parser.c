@@ -18,7 +18,7 @@ void print_ts_coll(struct ub_ts_collection* coll, int level);
 void print_ts_node(struct ub_ts_node* node, int level);
 
 void print_ts_coll(struct ub_ts_collection* coll, int level) {
-    printl(1, level, "Collection: type = 0x%02X (%d), %d children\n", coll->type, coll->type, coll->child_count);
+    printl(1, level, "Collection: type = 0x%02X (%d), @0x%0X, %d children\n", coll->type, coll->type, coll->fpos, coll->child_count);
 
     printl(0, level, "[\n");
     level++;
@@ -48,7 +48,7 @@ void print_ts_coll(struct ub_ts_collection* coll, int level) {
 }
 
 void print_ts_node(struct ub_ts_node* node, int level) {
-    printl(1, level, "Node: 0x%04X (%s), %d children\n", node->type, ub_obj_type_str(node->type), node->child_count);
+    printl(1, level, "Node: 0x%04X (%s), @0x%04X, %d children\n", node->type, ub_obj_type_str(node->type), node->fpos, node->child_count);
     printl(0, level, "{\n");
     level++;
 
@@ -56,7 +56,13 @@ void print_ts_node(struct ub_ts_node* node, int level) {
         enum ub_ts_type tag_type = *((enum ub_ts_type*) node->child_ptrs[i]);
         if (tag_type == UB_TST_PROP) {
             struct ub_ts_prop* prop = node->child_ptrs[i];
-            printl(1, level, "Prop: %s =", ub_ts_prop_name_str(prop));
+            const char* name = ub_ts_prop_name_str(prop);
+            if (name == NULL) {
+                printl(1, level, "Prop: Unknown (01 %02X %02X %02X) =", prop->type_b1, prop->type_b2, prop->type_b3);
+            }
+            else {
+                printl(1, level, "Prop: %s =", ub_ts_prop_name_str(prop));
+            }
             int len = ub_ts_prop_len(prop);
             if (len > 4) {
                 for (int j = 0; j < len; j++) {

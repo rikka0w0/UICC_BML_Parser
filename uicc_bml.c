@@ -120,7 +120,7 @@ int ub_ts_prop_len(struct ub_ts_prop* prop) {
 
 const char* ub_ts_prop_name_str(struct ub_ts_prop* prop) {
     struct ts_prop_type* type = ub_ts_prop_type_from_bin(prop->type_b1, prop->type_b2, prop->type_b3);
-    return type == NULL ? "Unknown Prop" : type->name;
+    return type == NULL ? NULL : type->name;
 }
 
 int ub_check_header(FILE* hFile) {
