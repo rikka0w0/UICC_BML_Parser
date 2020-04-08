@@ -134,6 +134,9 @@ Up to now, there are only 2 known property types.
 1. BYTE, type b2
 1. BYTE, type b3
 1. the payload, variable length
+
+if b1 is 0x01, b3 seems to indicate the length of the payload: 0x04->1 byte, 0x03->2bytes, 0x02->4bytes.
+
 ```
 static const struct ts_prop_type {
     uint8_t b1, b2, b3;
@@ -141,14 +144,22 @@ static const struct ts_prop_type {
     const char* name;               // Friendly name
 } ts_prop_type_data[] = {
     {0x01, 0x41, 0x2B, 1, "MenuGroup.Class"},
-    {0x01, 0x00, 0x03, 2, "Referring Id"},
+    {0x01, 0x00, 0x02, 4, "Referring Id <4>"},
+    {0x01, 0x00, 0x03, 2, "Referring Id <2>"},
+    {0x01, 0x00, 0x04, 1, "Referring Id <1>"},
+    {0x01, 0x3D, 0x02, 4, "ApplicationModes <4>"},
+    {0x01, 0x3D, 0x03, 2, "ApplicationModes <2>"},
+    {0x01, 0x3D, 0x04, 1, "ApplicationModes <1>"},
     {0x01, 0x0B, 0x04, 1, "(01 01 0B 04) <1>"},
     {0x01, 0x0B, 0x09, 1, "(01 01 0B 09) <1>"},
-    {0x04, 0x44, 0x00, 4, "(01 04 44 00) <4>"},
-    {0x01, 0x00, 0x02, 4, "(01 01 00 02) <4>"},
+    {0x01, 0x33, 0x04, 1, "(01 01 33 04) <1>"},
+    {0x01, 0x46, 0x04, 1, "(01 01 46 04) <1>"},
+
     {0x04, 0x09, 0x00, 4, "(01 04 09 00) <4>"},
+    {0x04, 0x0A, 0x00, 4, "(01 04 0A 00) <4>"},
     {0x04, 0x3F, 0x00, 4, "(01 04 3F 00) <4>"},
-    {0x01, 0x33, 0x04, 1, "(01 01 33 04) <1>"}
+    {0x04, 0x44, 0x00, 4, "(01 04 44 00) <4>"},
+    {0x04, 0x60, 0x00, 4, "(01 04 60 00) <4>"}
 };
 ```
 ### Pointer Data (0x3E)
