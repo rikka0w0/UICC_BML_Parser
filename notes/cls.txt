@@ -1,0 +1,3 @@
+FooterItems 0x49
+MRUItems 0x48
+Items 0x3E

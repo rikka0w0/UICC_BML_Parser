@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <Windows.h>
 
 #include "uicc_bml.h"
 
@@ -198,6 +199,11 @@ void parse(FILE* hFile) {
 
 int main(int argc, char** argv)
 {
+    DWORD console_mode;
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(hConsole, &console_mode);
+    SetConsoleMode(hConsole, console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
     if (argc < 2) {
         printf("Need input file!\n");
         exit(EXIT_FAILURE);

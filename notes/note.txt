@@ -1,0 +1,41 @@
+16 00 13 00 10 2A 00 06 01 01 00 03 21 46 01 04 44 00 80 44 05 01 01 01 0B 04 00 3E 82 04 00 00 3E 15 07 00 00 3E 1C 07 00 00
+                                    !  F
+   |typ| |fix| |SZ | CT
+16 00 1A 00 10 13 00 02 01 01 00 03 21 54 3E 15 07 00 00
+                                    !  T
+                                    
+                                    
+Application menu, the second menu group
+Total len = 2E
+Each len = 0E
+16 00 18 00 10 20 00 02 01 01 41 2B 01 18 01 3E 01 00 the MenuGroup
+16 00 0F 00 10 0E 00 01 01 01 00 03 21 45             ExitButton
+
+Application menu, the second menu group
+Total len = 2E
+Each len = 0E
+
+16 00 18 00 10 2E 00 02 01 01 41 2B 01 18 01 3E 02 00   the MenuGroup
+16 00 0F 00 10 0E 00 01 01 01 00 03 21 45               ExitButton
+16 00 0F 00 10 0E 00 01 01 01 00 03 21 35               Button5
+
+
+                                    !  G
+16 00 07 00 10 63 00 02 01 01 00 03 21 47 18 01 3E 01 00
+Toobar group1
+Total len = 50
+Each len = 1B
+16 00 26 00 10 50 00 03 01 01 41 04 09 01 04 42 00 40 44 05 00 18 01 3E 02 00 
+16 00 0F 00 10 1B 00 03 01 04 25 00 80 41 05 01 01 01 08 04 03 01 01 00 03 21 35  Button5
+16 00 06 00 10 1B 00 03 01 04 25 00 80 41 05 01 01 01 08 04 03 01 01 00 03 21 4C  ToggleButton
+
+
+
+Format
+Byte, 0x16, Tag header magic number????
+WORD, Tag type
+WORD, (fixed?) 0x1000 (little endian)
+WORD, length of this tag, from the magic number to the end of the tag
+
+
+18 01 3E followed by a WORD, number of sub tags
